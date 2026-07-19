@@ -1,0 +1,7 @@
+node_modules/
+*.pdf
+ChatGPT Image*.png
+cover_page.png
+*.log
+scratch_*.png
+*.temp

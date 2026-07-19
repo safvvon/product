@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The General Practitioner's Notes - Interactive 3D Showcase</title>
+  <!-- Import Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Import Three.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  
+  <style>
+    :root {
+      --bg-dark: #faf8f5; /* Premium warm cream paper */
+      --bg-card: #ffffff;
+      --border-card: #ebe9e2; /* Very soft grey border */
+      --primary: #2d8a9e; /* Elegant turquoise */
+      --primary-glow: rgba(45, 138, 158, 0.08);
+      --text-main: #1d2229; /* Dark graphite for print contrast */
+      --text-muted: #5e6875; /* Slate grey body */
+    }
+
+    body.prod-0-active {
+      --primary: #2d8a9e; /* Turquoise */
+      --primary-glow: rgba(45, 138, 158, 0.08);
+    }
+
+    body.prod-1-active {
+      --primary: #c75467; /* Muted warm rose */
+      --primary-glow: rgba(199, 84, 103, 0.08);
+    }
+
+    body.prod-2-active {
+      --primary: #3b875d; /* Elegant sage green */
+      --primary-glow: rgba(59, 135, 93, 0.08);
+    }
+
+    body.prod-3-active {
+      --primary: #1e707a; /* Muted slate teal */
+      --primary-glow: rgba(30, 112, 122, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      overflow-x: hidden;
+      line-height: 1.65;
+      position: relative;
+    }
+
+    /* Medical Chart / ECG Graph Paper Grid Backdrop */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 0;
+      background-image: 
+        linear-gradient(rgba(45, 138, 158, 0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(45, 138, 158, 0.015) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+
+    /* Background glow elements */
+    .glow-bg {
+      display: none;
+    }
+
+    .glow-bg-2 {
+      display: none;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      min-height: 100vh;
+      width: 100%;
+      max-width: 1400px;
+      margin: 0 auto;
+      position: relative;
+      background: transparent;
+    }
+
+    /* Content sections on the left */
+    .content-column {
+      padding: 4rem 3.5rem;
+      z-index: 10;
+      position: relative;
+    }
+
+    /* Asymmetric Vertical Print Guideline */
+    .content-column::before {
+      content: '';
+      position: absolute;
+      left: 1.5rem;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background: repeating-linear-gradient(to bottom, var(--border-card), var(--border-card) 6px, transparent 6px, transparent 12px);
+      opacity: 0.8;
+    }
+
+    section {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 2rem 0;
+      border-bottom: 1px solid var(--border-card);
+      position: relative;
+      box-sizing: border-box;
+    }
+
+    section:last-child {
+      border-bottom: none;
+    }
+
+    /* Ambient Animated Blobs & Medical Grid Backdrop */
+    .ambient-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .blob {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(140px);
+      opacity: 0.18;
+      mix-blend-mode: multiply;
+      transition: background-color 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 0;
+    }
+    .blob-1 {
+      width: 650px;
+      height: 650px;
+      background-color: var(--primary);
+      top: -10%;
+      left: -10%;
+      animation: drift-1 25s ease-in-out infinite alternate;
+    }
+    .blob-2 {
+      width: 550px;
+      height: 550px;
+      background-color: #ebdcd7;
+      bottom: -10%;
+      right: -10%;
+      animation: drift-2 20s ease-in-out infinite alternate;
+    }
+
+    body.prod-0-active .blob-2 { background-color: #e0f2f1; }
+    body.prod-1-active .blob-2 { background-color: #fce4ec; }
+    body.prod-2-active .blob-2 { background-color: #e8f5e9; }
+    body.prod-3-active .blob-2 { background-color: #e0f7fa; }
+
+    @keyframes drift-1 {
+      0% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(120px, 80px) scale(1.1); }
+      100% { transform: translate(-40px, 150px) scale(0.95); }
+    }
+    @keyframes drift-2 {
+      0% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(-150px, -50px) scale(0.9); }
+      100% { transform: translate(60px, -120px) scale(1.05); }
+    }
+
+    /* Animated ECG Heartbeat Path */
+    .ecg-container {
+      position: fixed;
+      top: 45%;
+      left: 0;
+      width: 100%;
+      height: 100px;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.12;
+    }
+    .ecg-svg {
+      width: 100%;
+      height: 100%;
+    }
+    .ecg-path {
+      stroke: var(--primary);
+      stroke-width: 1.5;
+      fill: none;
+      stroke-dasharray: 1000;
+      stroke-dashoffset: 1000;
+      animation: draw-ecg 12s linear infinite;
+      transition: stroke 1s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes draw-ecg {
+      0% { stroke-dashoffset: 1000; }
+      100% { stroke-dashoffset: 0; }
+    }
+
+    /* Technical Monospace Print Metadata Stamp */
+    .print-meta-tag {
+      font-family: monospace;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      opacity: 0.75;
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 0.25rem 0.7rem;
+      background: rgba(0, 0, 0, 0.005);
+      border: 1px dashed var(--primary);
+      border-radius: 2px; /* Raw ticket stamp corner */
+      color: var(--primary);
+      font-size: 0.72rem;
+      font-weight: 700;
+      margin-bottom: 1.2rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      font-family: monospace;
+      transition: all 0.3s ease;
+    }
+
+    h1, h2 {
+      font-family: 'Lora', Georgia, serif;
+      font-weight: 600;
+      line-height: 1.2;
+      margin-bottom: 1.5rem;
+      color: var(--text-main);
+    }
+
+    h1 {
+      font-size: 3.6rem;
+    }
+
+    h2 {
+      font-size: 2.6rem;
+    }
+
+    p {
+      color: var(--text-muted);
+      font-size: 1.12rem;
+      margin-bottom: 2rem;
+    }
+
+    .highlight-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 8px;
+      padding: 1.6rem 2rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02), 0 1px 3px rgba(0, 0, 0, 0.02);
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .highlight-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 24px var(--primary-glow), 0 2px 4px rgba(0, 0, 0, 0.02);
+    }
+
+    .highlight-card h3 {
+      font-family: 'Lora', serif;
+      font-weight: 600;
+      font-size: 1.25rem;
+      margin-bottom: 0.6rem;
+      color: var(--text-main);
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 0.95rem 2rem;
+      background: #1d2229; /* Solid deep charcoal button for strong editorial contrast */
+      color: #ffffff;
+      font-weight: 600;
+      border: 1px solid #1d2229;
+      border-radius: 6px;
+      cursor: pointer;
+      text-decoration: none;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      text-align: center;
+    }
+
+    .btn:hover {
+      background: var(--primary);
+      border-color: var(--primary);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px var(--primary-glow);
+    }
+
+    /* Fixed 3D viewport on the right */
+    .viewport-column {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    #canvas-container {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+
+    .scroll-hint {
+      position: absolute;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      animation: bounce 2s infinite;
+    }
+
+    .scroll-hint span {
+      margin-bottom: 0.5rem;
+    }
+
+    .scroll-hint svg {
+      width: 20px;
+      height: 20px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+    }
+
+    /* Responsive style */
+    @media (max-width: 900px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+      .viewport-column {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100vh;
+        z-index: 1;
+        opacity: 0.35; /* slightly darker overlay to read light text */
+      }
+      .content-column {
+        position: relative;
+        z-index: 10;
+        background: rgba(250, 248, 245, 0.95); /* matching warm paper white mobile background */
+      }
+    }
+
+    @keyframes bounce {
+      0%, 20%, 50%, 80%, 100% { transform: translateY(0) translateX(-50%); }
+      40% { transform: translateY(-10px) translateX(-50%); }
+      60% { transform: translateY(-5px) translateX(-50%); }
+    }
+    /* Table of Contents layout for Section 1 */
+    .toc-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+    .toc-item {
+      display: flex;
+      gap: 1.2rem;
+      border-left: 2px solid var(--primary);
+      padding-left: 1.2rem;
+      transition: border-color 0.3s ease;
+    }
+    .toc-num {
+      font-family: 'Lora', serif;
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--primary);
+      opacity: 0.8;
+      line-height: 1;
+    }
+    .toc-item h4 {
+      font-family: 'Lora', serif;
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 0.3rem;
+    }
+    .toc-item p {
+      font-size: 0.95rem;
+      margin-bottom: 0;
+      line-height: 1.5;
+    }
+
+    /* Workflow Timeline layout for Section 2 */
+    .workflow-timeline {
+      position: relative;
+      padding-left: 1.5rem;
+      margin-top: 1.5rem;
+    }
+    .workflow-timeline::before {
+      content: '';
+      position: absolute;
+      left: 4px;
+      top: 8px;
+      bottom: 8px;
+      width: 1px;
+      background: var(--border-card);
+    }
+    .timeline-step {
+      position: relative;
+      margin-bottom: 1.5rem;
+    }
+    .timeline-step:last-child {
+      margin-bottom: 0;
+    }
+    .step-bullet {
+      position: absolute;
+      left: -23px;
+      top: 6px;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--bg-dark);
+      border: 2px solid var(--primary);
+    }
+    .timeline-step h4 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 0.4rem;
+    }
+    .timeline-step p {
+      font-size: 0.95rem;
+      margin-bottom: 0;
+      line-height: 1.5;
+    }
+
+    /* Matrix Grid layout for Section 3 */
+    .matrix-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+    .matrix-cell {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 8px;
+      padding: 1.5rem 1.8rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02), 0 1px 3px rgba(0, 0, 0, 0.02);
+    }
+    .matrix-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(59, 135, 93, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 0.8rem;
+    }
+    .matrix-icon svg {
+      width: 18px;
+      height: 18px;
+      fill: none;
+      stroke: #3b875d;
+      stroke-width: 2.5;
+    }
+    .matrix-icon.warning {
+      background: rgba(199, 84, 103, 0.1);
+    }
+    .matrix-icon.warning svg {
+      fill: #c75467;
+      stroke: none;
+    }
+    .matrix-cell h4 {
+      font-family: 'Lora', serif;
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 0.4rem;
+    }
+    .matrix-cell p {
+      font-size: 0.95rem;
+      margin-bottom: 0;
+      line-height: 1.5;
+    }
+
+    /* Syllabus Block layout for Section 4 */
+    .syllabus-block {
+      border: 1px solid var(--border-card);
+      border-radius: 8px;
+      background: var(--bg-card);
+      overflow: hidden;
+      margin-top: 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+    }
+    .syllabus-header {
+      background: rgba(0, 0, 0, 0.015);
+      border-bottom: 1px solid var(--border-card);
+      padding: 1rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .syllabus-header .badge {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--primary);
+    }
+    .syllabus-header .meta {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+    .syllabus-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .syllabus-list li {
+      display: flex;
+      gap: 1.2rem;
+      padding: 1.2rem 1.5rem;
+      border-bottom: 1px solid var(--border-card);
+    }
+    .syllabus-list li:last-child {
+      border-bottom: none;
+    }
+    .bullet-num {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--primary-glow);
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.75rem;
+      flex-shrink: 0;
+    }
+    .syllabus-list li h5 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 0.2rem;
+    }
+    .syllabus-list li p {
+      font-size: 0.9rem;
+      margin-bottom: 0;
+      line-height: 1.4;
+    }
+
+    /* --- Premium Staggered Scroll-Entrance Animations --- */
+    section > .tag,
+    section > .print-meta-tag,
+    section > h1,
+    section > h2,
+    section > p,
+    section > .toc-grid,
+    section > .workflow-timeline,
+    section > .matrix-grid,
+    section > .syllabus-block,
+    section > .btn {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Transition delays for staggered print buildup */
+    section > .tag { transition-delay: 0.05s; }
+    section > .print-meta-tag { transition-delay: 0.12s; }
+    section > h1, section > h2 { transition-delay: 0.2s; }
+    section > p { transition-delay: 0.28s; }
+    section > .toc-grid,
+    section > .workflow-timeline,
+    section > .matrix-grid,
+    section > .syllabus-block { transition-delay: 0.35s; }
+    section > .btn { transition-delay: 0.42s; }
+
+    /* Active entrance triggers based on section active class */
+    section.active > * {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Inner items animation base state */
+    .toc-item, .timeline-step, .matrix-cell, .syllabus-list li {
+      opacity: 0;
+      transform: translateY(15px);
+      transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Delays for children */
+    .toc-item:nth-child(1) { transition-delay: 0.42s; }
+    .toc-item:nth-child(2) { transition-delay: 0.5s; }
+
+    .timeline-step:nth-child(1) { transition-delay: 0.42s; }
+    .timeline-step:nth-child(2) { transition-delay: 0.5s; }
+
+    .matrix-cell:nth-child(1) { transition-delay: 0.42s; }
+    .matrix-cell:nth-child(2) { transition-delay: 0.5s; }
+
+    .syllabus-list li:nth-child(1) { transition-delay: 0.42s; }
+    .syllabus-list li:nth-child(2) { transition-delay: 0.5s; }
+
+    /* Active inner items triggers */
+    section.active .toc-item,
+    section.active .timeline-step,
+    section.active .matrix-cell,
+    section.active .syllabus-list li {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Pulsing bullet ring for workflow timeline steps */
+    @keyframes pulse-ring {
+      0% { box-shadow: 0 0 0 0 rgba(199, 84, 103, 0.4); }
+      70% { box-shadow: 0 0 0 8px rgba(199, 84, 103, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(199, 84, 103, 0); }
+    }
+    body.prod-1-active .timeline-step .step-bullet {
+      animation: pulse-ring 2.5s infinite;
+    }
+
+    /* Micro-interactions on grid cells */
+    .matrix-icon svg {
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .matrix-cell:hover .matrix-icon svg {
+      transform: scale(1.15) rotate(-5deg);
+    }
+
+    /* Syllabus list item hover highlight */
+    .syllabus-list li {
+      transition: background-color 0.3s ease;
+    }
+    .syllabus-list li:hover {
+      background-color: rgba(45, 138, 158, 0.015);
+    }
+    .bullet-num {
+      transition: all 0.3s ease;
+    }
+    .syllabus-list li:hover .bullet-num {
+      background: var(--primary);
+      color: #ffffff;
+      transform: scale(1.1);
+    }
+  </style>
+</head>
+<body>
+  <div class="ambient-bg">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+  </div>
+  <div class="ecg-container">
+    <svg class="ecg-svg" viewBox="0 0 1000 100" preserveAspectRatio="none">
+      <path class="ecg-path" d="M0,50 L300,50 L315,50 L325,35 L335,65 L345,5 L360,95 L372,42 L382,58 L392,50 L402,50 L700,50 L715,50 L725,35 L735,65 L745,5 L760,95 L772,42 L782,58 L792,50 L1000,50" />
+    </svg>
+  </div>
+
+  <div class="container">
+    <!-- Content Section -->
+    <div class="content-column">
+      
+      <section id="volume1-first">
+        <span class="tag">VOL. I // DIAGNOSTICS</span>
+        <div class="print-meta-tag">[ CLINICAL PRACTICE MONOGRAPH ]</div>
+        <h1>Volume I: Clinical Practice</h1>
+        <p>An essential reference guide for clinicians, residents, and medical students. Designed to streamline clinical decision-making. <em>"Where care is deliberate, attention is quiet and judgement is trusted..."</em></p>
+        
+        <div class="toc-grid">
+          <div class="toc-item">
+            <span class="toc-num">01</span>
+            <div>
+              <h4>Core Diagnostics</h4>
+              <p>Cardiac ECG interpretation workups, diagnostic reasoning guides, and essential outpatient worksheets.</p>
+            </div>
+          </div>
+          <div class="toc-item">
+            <span class="toc-num">02</span>
+            <div>
+              <h4>Assessment Frameworks</h4>
+              <p>High-yield patient examination pathways, quick reference metrics, and clinical safety thresholds.</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="scroll-hint">
+          <span>Scroll to Rotate Products</span>
+          <svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
+        </div>
+      </section>
+
+      <section id="volume2-second">
+        <span class="tag">VOL. II // CLINICAL FOUNDATIONS</span>
+        <div class="print-meta-tag">[ CLINICAL SKILLS MANUSCRIPT ]</div>
+        <h2>Volume II: Clinical Foundation</h2>
+        <p>Your companion for core clinical basics. Crafted to guide junior doctors and students through communication, history-taking, and basic ward procedures. <em>"...in the space between listening and deciding, this note belongs..."</em></p>
+        
+        <div class="workflow-timeline">
+          <div class="timeline-step">
+            <div class="step-bullet"></div>
+            <div>
+              <h4>Clinical Basics & Communication</h4>
+              <p>Detailed physical examination frameworks, patient history-taking worksheets, and clinical communication scripts.</p>
+            </div>
+          </div>
+          <div class="timeline-step">
+            <div class="step-bullet"></div>
+            <div>
+              <h4>Common Ward Workups</h4>
+              <p>Standard protocols for ward calls, common emergency symptoms, and clinic documentation.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="volume3-third">
+        <span class="tag">VOL. III // WORKFLOWS</span>
+        <div class="print-meta-tag">[ CLINICAL DIAGNOSIS PROTOCOLS ]</div>
+        <h2>Volume III: Clinical Diagnostics</h2>
+        <p>A comprehensive clinical practice guide focusing on advanced diagnosis and management guidelines. <em>"Written for the pauses, the doubts, and the quiet confidence of everyday practice."</em></p>
+        
+        <div class="matrix-grid">
+          <div class="matrix-cell">
+            <div class="matrix-icon">
+              <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+            </div>
+            <h4>Diagnostic Checklists</h4>
+            <p>Differential diagnosis matrices, diagnostic criteria, and standard step-by-step clinical workflows.</p>
+          </div>
+          <div class="matrix-cell">
+            <div class="matrix-icon warning">
+              <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+            </div>
+            <h4>High-Yield Red Flags</h4>
+            <p>Critical warnings, red flags, and high-yield insights for daily hospital rounds and practice.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="gp-course">
+        <span class="tag">GP KIT // CLINICAL COURSE</span>
+        <div class="print-meta-tag">[ VIDEO MASTERCLASS SYLLABUS ]</div>
+        <h2>The General Practitioners Course</h2>
+        <p>A complete video course designed to master the clinical route with confidence, providing step-by-step guidance for daily outpatient cases.</p>
+        
+        <div class="syllabus-block">
+          <div class="syllabus-header">
+            <span class="badge">Syllabus Preview</span>
+            <span class="meta">15+ Video Chapters</span>
+          </div>
+          <ul class="syllabus-list">
+            <li>
+              <span class="bullet-num">01</span>
+              <div>
+                <h5>Interactive Modules</h5>
+                <p>Master medical guidelines, emergency calls, and clinical diagnostics at your own pace.</p>
+              </div>
+            </li>
+            <li>
+              <span class="bullet-num">02</span>
+              <div>
+                <h5>Clinical Route Outlines</h5>
+                <p>Step-by-step guidance and frameworks for common outpatient clinic cases.</p>
+              </div>
+            </li>
+          </ul>
+        </div>
+        
+        <a href="#" class="btn" style="margin-top: 1rem;">Order the Course & Kit</a>
+      </section>
+
+    </div>
+
+    <!-- 3D Book Viewport -->
+    <div class="viewport-column">
+      <div id="canvas-container"></div>
+    </div>
+  </div>
+
+  <script>
+    // --- Three.js Setup ---
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    
+    // Camera
+    const camera = new THREE.PerspectiveCamera(40, container.clientWidth / container.clientHeight, 0.1, 100);
+    camera.position.set(0, 0, 4.2);
+
+    // Renderer
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    container.appendChild(renderer.domElement);
+
+    // --- Lighting ---
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+    scene.add(ambientLight);
+
+    const dirLight1 = new THREE.DirectionalLight(0xffffff, 1.2);
+    dirLight1.position.set(5, 5, 4);
+    scene.add(dirLight1);
+
+    const dirLight2 = new THREE.DirectionalLight(0x5ca880, 0.4); // Subtle green fill light
+    dirLight2.position.set(-5, -2, 2);
+    scene.add(dirLight2);
+
+    // --- Helper to Generate Page Edge Texture ---
+    function createPagesTexture() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 256;
+      canvas.height = 512;
+      const ctx = canvas.getContext('2d');
+      
+      ctx.fillStyle = '#fbfbf7';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw horizontal lines to simulate page stacks
+      ctx.strokeStyle = '#e5e5dd';
+      ctx.lineWidth = 1;
+      for (let y = 0; y < canvas.height; y += 4) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
+      return new THREE.CanvasTexture(canvas);
+    }
+
+    // --- Helper to Generate a Soft Blurred Shadow Texture ---
+    function createShadowTexture() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 128;
+      canvas.height = 128;
+      const ctx = canvas.getContext('2d');
+      
+      // Draw a soft radial gradient shadow
+      const gradient = ctx.createRadialGradient(64, 64, 2, 64, 64, 60);
+      gradient.addColorStop(0, 'rgba(0, 0, 0, 0.48)'); // Darker center for white theme visibility
+      gradient.addColorStop(0.3, 'rgba(0, 0, 0, 0.24)');
+      gradient.addColorStop(0.7, 'rgba(0, 0, 0, 0.05)');
+      gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, 128, 128);
+      
+      const texture = new THREE.CanvasTexture(canvas);
+      return texture;
+    }
+
+    // --- Textures Loading ---
+    const textureLoader = new THREE.TextureLoader();
+    
+    // Volume 1 (Turquoise)
+    const frontTextureV1 = textureLoader.load('/images/cover1_front_cover.png');
+    const spineTextureV1 = textureLoader.load('/images/cover1_spine.png');
+    const backTextureV1 = textureLoader.load('/images/cover1_back_cover.png');
+    
+    // Volume 2 (Pink)
+    const frontTextureV2 = textureLoader.load('/images/vol2_front_cover.png');
+    const spineTextureV2 = textureLoader.load('/images/vol2_spine.png');
+    const backTextureV2 = textureLoader.load('/images/vol2_back_cover.png');
+    
+    // Volume 3 (Green)
+    const frontTextureV3 = textureLoader.load('/images/front_cover.png');
+    const spineTextureV3 = textureLoader.load('/images/spine.png');
+    const backTextureV3 = textureLoader.load('/images/back_cover.png');
+
+    // New Products Textures
+    const courseTexture = textureLoader.load('/images/course_texture.png');
+    
+    const pagesTexture = createPagesTexture();
+
+    // Adjust texture properties
+    [
+      frontTextureV1, spineTextureV1, backTextureV1,
+      frontTextureV2, spineTextureV2, backTextureV2,
+      frontTextureV3, spineTextureV3, backTextureV3,
+      courseTexture
+    ].forEach(t => {
+      t.colorSpace = THREE.SRGBColorSpace;
+    });
+    
+    // Define material creation helper for books
+    function createBookMaterials(front, spine, back) {
+      return [
+        new THREE.MeshStandardMaterial({ map: pagesTexture, roughness: 0.8, transparent: true }), // Right face
+        new THREE.MeshStandardMaterial({ map: spine, roughness: 0.5, transparent: true }),        // Left face
+        new THREE.MeshStandardMaterial({ map: pagesTexture, roughness: 0.8, transparent: true }), // Top face
+        new THREE.MeshStandardMaterial({ map: pagesTexture, roughness: 0.8, transparent: true }), // Bottom face
+        new THREE.MeshStandardMaterial({ map: front, roughness: 0.5, transparent: true }),        // Front face
+        new THREE.MeshStandardMaterial({ map: back, roughness: 0.5, transparent: true })         // Back face
+      ];
+    }
+
+    const materialsV1 = createBookMaterials(frontTextureV1, spineTextureV1, backTextureV1);
+    const materialsV2 = createBookMaterials(frontTextureV2, spineTextureV2, backTextureV2);
+    const materialsV3 = createBookMaterials(frontTextureV3, spineTextureV3, backTextureV3);
+
+    // Book geometry constants
+    const bookWidth = 1.1;
+    const bookHeight = 1.8325;
+    const bookThickness = 0.12;
+    const geometry = new THREE.BoxGeometry(bookWidth, bookHeight, bookThickness);
+
+    // 1. Create Book Meshes
+    const meshV1 = new THREE.Mesh(geometry, materialsV1);
+    const meshV2 = new THREE.Mesh(geometry, materialsV2);
+    const meshV3 = new THREE.Mesh(geometry, materialsV3);
+
+    // 2. Create GP Course Mesh (Tablet Mockup)
+    const courseMesh = new THREE.Group();
+
+    const tabWidth = 1.2;
+    const tabHeight = 1.1;
+    const bezelSize = 0.08;
+    const tabThickness = 0.05;
+    const totalWidth = tabWidth + bezelSize * 2;
+    const totalHeight = tabHeight + bezelSize * 2;
+
+    // A. Tablet Body (Back & Edges) - Sleek space gray aluminum casing
+    const bodyGeo = new THREE.BoxGeometry(totalWidth, totalHeight, tabThickness);
+    const bodyMat = new THREE.MeshStandardMaterial({
+      color: 0x1f2022, // Space gray
+      metalness: 0.8,
+      roughness: 0.25,
+      transparent: true
+    });
+    const tabletBody = new THREE.Mesh(bodyGeo, bodyMat);
+    courseMesh.add(tabletBody);
+
+    // B. Bezel (Front Face Border) - Matte black screen frame
+    const bezelGeo = new THREE.PlaneGeometry(totalWidth - 0.002, totalHeight - 0.002);
+    const bezelMat = new THREE.MeshStandardMaterial({
+      color: 0x0a0a0b,
+      roughness: 0.9,
+      metalness: 0.1,
+      transparent: true
+    });
+    const tabletBezel = new THREE.Mesh(bezelGeo, bezelMat);
+    tabletBezel.position.z = tabThickness / 2 + 0.001; // Just in front of body
+    courseMesh.add(tabletBezel);
+
+    // C. Screen (Displaying the course texture)
+    const screenGeo = new THREE.PlaneGeometry(tabWidth, tabHeight);
+    const screenMat = new THREE.MeshStandardMaterial({
+      map: courseTexture,
+      roughness: 0.15, // Sleek glassy screen
+      metalness: 0.1,
+      transparent: true
+    });
+    const tabletScreen = new THREE.Mesh(screenGeo, screenMat);
+    tabletScreen.position.z = tabThickness / 2 + 0.002; // Just in front of bezel
+    courseMesh.add(tabletScreen);
+
+    // D. Front Camera Lens (Small detail on top bezel)
+    const frontCamGeo = new THREE.CircleGeometry(0.012, 16);
+    const frontCamMat = new THREE.MeshBasicMaterial({
+      color: 0x040404,
+      transparent: true
+    });
+    const frontCam = new THREE.Mesh(frontCamGeo, frontCamMat);
+    frontCam.position.set(0, totalHeight / 2 - bezelSize / 2, tabThickness / 2 + 0.003);
+    courseMesh.add(frontCam);
+
+    // E. Back Camera Bump (Visible when the tablet rotates to the back)
+    const backCamBumpGeo = new THREE.BoxGeometry(0.12, 0.12, 0.01);
+    const backCamBumpMat = new THREE.MeshStandardMaterial({
+      color: 0x151617,
+      metalness: 0.8,
+      roughness: 0.3,
+      transparent: true
+    });
+    const backCamBump = new THREE.Mesh(backCamBumpGeo, backCamBumpMat);
+    backCamBump.position.set(-(totalWidth / 2 - 0.12), totalHeight / 2 - 0.12, -(tabThickness / 2 + 0.005));
+    courseMesh.add(backCamBump);
+
+    // G. Back Camera Lens (Shiny reflective lens)
+    const backCamLensGeo = new THREE.CircleGeometry(0.035, 16);
+    const backCamLensMat = new THREE.MeshStandardMaterial({
+      color: 0x070b0e,
+      roughness: 0.05,
+      metalness: 0.9,
+      transparent: true
+    });
+    const backCamLens = new THREE.Mesh(backCamLensGeo, backCamLensMat);
+    backCamLens.position.set(-(totalWidth / 2 - 0.12), totalHeight / 2 - 0.12, -(tabThickness / 2 + 0.011));
+    backCamLens.rotation.y = Math.PI; // Pointing backwards
+    courseMesh.add(backCamLens);
+
+
+    const productGroups = [];
+    const shadowPlanes = [];
+    const shadowTexture = createShadowTexture();
+    const shadowPlaneGeo = new THREE.PlaneGeometry(1.4, 1.4);
+
+    const startX = 6.0;
+    const startY = -4.5;
+    const startZ = 0.0;
+    const startScale = 0.1; 
+
+    const productsList = [
+      meshV1,
+      meshV2,
+      meshV3,
+      courseMesh
+    ];
+
+    for (let i = 0; i < 4; i++) {
+      const group = productsList[i];
+      // Default initial states: sitting small off-screen at bottom-right
+      group.position.set(startX, startY, startZ);
+      group.scale.set(startScale, startScale, startScale);
+      group.rotation.set(0.15, 0.6, 0); 
+      scene.add(group);
+      productGroups.push(group);
+
+      // Create a dedicated shadow plane for each product
+      const shadowPlaneMat = new THREE.MeshBasicMaterial({
+        map: shadowTexture,
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.MultiplyBlending,
+        opacity: 0.0
+      });
+      const shadowP = new THREE.Mesh(shadowPlaneGeo, shadowPlaneMat);
+      shadowP.rotation.x = -Math.PI / 2;
+      shadowP.position.set(startX, startY - (i === 3 ? 0.75 : 1.05), startZ); // Dynamic starting height relative to product bottom
+      scene.add(shadowP);
+      shadowPlanes.push(shadowP);
+    }
+
+    // Targets for each product's interpolation
+    const productTargets = [];
+    for (let i = 0; i < 4; i++) {
+      productTargets.push({
+        x: startX,
+        y: startY,
+        z: startZ,
+        scale: startScale,
+        rotY: 0.6,
+        opacity: (i === 0) ? 0.8 : 0.0,
+        active: false
+      });
+    }
+
+    const mouse = { x: 0, y: 0 };
+
+    window.addEventListener('scroll', () => {
+      const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const scrollPercent = window.scrollY / (scrollHeight || 1);
+
+      // Compute responsive active position: center (0.0) on mobile, offset right (1.3) on desktop
+      const isMobile = window.innerWidth <= 900;
+      const activeX = isMobile ? 0.0 : 1.3;
+
+      // Spaced mathematically across the 3 scroll transitions: 0.0 -> 0.333 -> 0.667 -> 1.0
+      const markers = [
+        { entryStart: 0.0,   entryEnd: 0.0,   activeStart: 0.0,   activeEnd: 0.08,  exitStart: 0.08,  exitEnd: 0.167 },
+        { entryStart: 0.167, entryEnd: 0.25,  activeStart: 0.25,  activeEnd: 0.417, exitStart: 0.417, exitEnd: 0.50 },
+        { entryStart: 0.50,  entryEnd: 0.583, activeStart: 0.583, activeEnd: 0.75,  exitStart: 0.75,  exitEnd: 0.833 },
+        { entryStart: 0.833, entryEnd: 0.917, activeStart: 0.917, activeEnd: 1.0,   exitStart: 1.0,   exitEnd: 1.0 }
+      ];
+
+      for (let i = 0; i < 4; i++) {
+        const m = markers[i];
+        const target = productTargets[i];
+
+        if (scrollPercent < m.entryStart) {
+          // Out of view at bottom right
+          target.x = startX;
+          target.y = startY;
+          target.z = startZ;
+          target.scale = startScale;
+          target.rotY = 0.6;
+          target.opacity = 0.0;
+          target.active = false;
+        } else if (scrollPercent <= m.entryEnd) {
+          // Entering from bottom right to center
+          const progress = (scrollPercent - m.entryStart) / (m.entryEnd - m.entryStart || 1);
+          target.x = startX - progress * (startX - activeX);
+          target.y = startY - progress * startY;
+          target.z = startZ - progress * startZ;
+          target.scale = startScale + progress * (1.0 - startScale);
+          target.rotY = 0.6;
+          target.opacity = progress;
+          target.active = false;
+        } else if (scrollPercent <= m.exitStart) {
+          // Centered & rotating
+          const progress = (scrollPercent - m.activeStart) / (m.exitStart - m.activeStart || 1);
+          target.x = activeX;
+          target.y = 0.0;
+          target.z = 0.0;
+          target.scale = 1.0;
+          target.rotY = 0.6 + progress * Math.PI * 2.0;
+          target.opacity = 1.0;
+          target.active = true;
+        } else if (scrollPercent <= m.exitEnd) {
+          // Exiting to top right
+          const progress = (scrollPercent - m.exitStart) / (m.exitEnd - m.exitStart || 1);
+          target.x = activeX + progress * (startX - activeX);
+          target.y = progress * -startY;
+          target.z = progress * startZ;
+          target.scale = 1.0 - progress * (1.0 - startScale);
+          target.rotY = 0.6 + Math.PI * 2.0 + progress * 1.0;
+          target.opacity = 1.0 - progress;
+          target.active = false;
+        } else {
+          // Out of view at top right
+          target.x = startX;
+          target.y = -startY;
+          target.z = startZ;
+          target.scale = startScale;
+          target.rotY = 0.6 + Math.PI * 2.0 + 1.0;
+          target.opacity = 0.0;
+          target.active = false;
+        }
+      }
+
+      // Dynamic theme shifting variables (swaps colors at mid-scroll boundaries)
+      let activeIndex = 0;
+      if (scrollPercent >= 0.833) activeIndex = 3;
+      else if (scrollPercent >= 0.50) activeIndex = 2;
+      else if (scrollPercent >= 0.167) activeIndex = 1;
+      
+      for (let j = 0; j < 4; j++) {
+        document.body.classList.remove(`prod-${j}-active`);
+      }
+      document.body.classList.add(`prod-${activeIndex}-active`);
+
+      // Toggle 'active' class on sections when product reaches the center
+      const sections = [
+        document.getElementById('volume1-first'),
+        document.getElementById('volume2-second'),
+        document.getElementById('volume3-third'),
+        document.getElementById('gp-course')
+      ];
+      for (let i = 0; i < 4; i++) {
+        const m = markers[i];
+        
+        // Volume 1 (i = 0) is active immediately on load (scrollPercent = 0) up to exitStart
+        const startThreshold = (i === 0) ? 0.0 : m.entryEnd;
+        
+        if (scrollPercent >= startThreshold && scrollPercent < m.exitStart) {
+          sections[i].classList.add('active');
+        } else {
+          sections[i].classList.remove('active');
+        }
+      }
+    });
+
+    window.addEventListener('mousemove', (event) => {
+      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    });
+
+    // --- Animation Loop ---
+    const clock = new THREE.Clock();
+    
+    // Helper to recursively update opacity of children meshes
+    function setOpacity(obj, opacity) {
+      obj.traverse(child => {
+        if (child.isMesh) {
+          if (Array.isArray(child.material)) {
+            child.material.forEach(m => {
+              m.transparent = true;
+              m.opacity = opacity;
+            });
+          } else if (child.material) {
+            child.material.transparent = true;
+            child.material.opacity = opacity;
+          }
+        }
+      });
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      
+      const elapsedTime = clock.getElapsedTime();
+      
+      for (let i = 0; i < 4; i++) {
+        const group = productGroups[i];
+        const shadow = shadowPlanes[i];
+        const target = productTargets[i];
+        
+        // Easing position
+        group.position.x += (target.x - group.position.x) * 0.08;
+        
+        // Easing Y rotation
+        group.rotation.y += (target.rotY - group.rotation.y) * 0.08;
+        
+        // Interactive mouse parallax tilt
+        let tiltX = 0.15;
+        let tiltY = group.rotation.y;
+        
+        if (target.active) {
+          tiltX = 0.15 + mouse.y * 0.15;
+          tiltY = target.rotY + mouse.x * 0.15;
+        }
+        
+        group.rotation.x += (tiltX - group.rotation.x) * 0.08;
+        group.rotation.y += (tiltY - group.rotation.y) * 0.08;
+        
+        // Floating Y hover (only for active product)
+        const hoverY = (target.active) ? Math.sin(elapsedTime * 0.8) * 0.05 : 0;
+        group.position.y += (target.y + hoverY - group.position.y) * 0.08;
+        group.position.z += (target.z - group.position.z) * 0.08;
+        
+        // Easing scale
+        const currentScale = group.scale.x;
+        const scaleVal = currentScale + (target.scale - currentScale) * 0.08;
+        group.scale.set(scaleVal, scaleVal, scaleVal);
+        
+        // Update opacity recursively
+        setOpacity(group, target.opacity);
+        
+        // Hide completely if out of view to save performance
+        group.visible = (target.opacity > 0.01);
+        
+        // Update shadow plane properties in sync
+        if (shadow) {
+          shadow.visible = group.visible;
+          shadow.position.x = group.position.x;
+          shadow.position.y = group.position.y - (i === 3 ? 0.75 : 1.05); // Float dynamically directly below bottom edge
+          shadow.position.z = group.position.z;
+          
+          const shadowScale = scaleVal * 1.35; // Constant scale factor matching hover offsets
+          shadow.scale.set(shadowScale, shadowScale, 1);
+          shadow.material.opacity = target.opacity * 0.95; // Match product visibility
+        }
+      }
+      
+      renderer.render(scene, camera);
+    }
+    
+    animate();
+
+    // --- Window Resize Handling ---
+    window.addEventListener('resize', () => {
+      camera.aspect = container.clientWidth / container.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(container.clientWidth, container.clientHeight);
+    });
+  </script>
+</body>
+</html>
